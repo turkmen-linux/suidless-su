@@ -1,6 +1,7 @@
 #include "server.h"
 #include "auth.h"
 #include "pty.h"
+#include "spawn.h"
 #include "common.h"
 #include "client.h"
 #include <sys/socket.h>

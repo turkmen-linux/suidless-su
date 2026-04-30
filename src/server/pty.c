@@ -1,3 +1,10 @@
+/*
+ * pty.c - PTY (pseudo-terminal) allocation and setup
+ *
+ * Handles the creation and configuration of pseudo-terminal
+ * pairs for use with shell processes.
+ */
+
 #include "pty.h"
 #include "common.h"
 #include <sys/types.h>
@@ -12,6 +19,13 @@
 #include <fcntl.h>
 #include <stdlib.h>
 
+/*
+ * Allocate a PTY master/slave pair.
+ *
+ * Opens a master PTY, grants access, unlocks it, and opens
+ * the corresponding slave device. Returns the file descriptors
+ * and the slave device name.
+ */
 int pty_allocate(int *master_fd, int *slave_fd, char *slave_name, size_t name_len) {
     int master, slave;
     char *pts_name;
@@ -58,6 +72,10 @@ int pty_allocate(int *master_fd, int *slave_fd, char *slave_name, size_t name_le
     return 0;
 }
 
+/*
+ * Configure the PTY slave terminal with raw mode settings
+ * and standard terminal flags for interactive use.
+ */
 int pty_setup_terminal(int slave_fd) {
     struct termios term;
     if (tcgetattr(slave_fd, &term) < 0) {
@@ -72,95 +90,4 @@ int pty_setup_terminal(int slave_fd) {
         return -1;
     }
     return 0;
-}
-
-pid_t pty_fork_shell(int master_fd, int slave_fd, const char *slave_name, struct session_req *session, struct passwd *pw) {
-    pid_t pid;
-    char *shell;
-    char login_shell[256];
-    char *args[16];
-    int arg_idx = 0;
-
-    if (session->shell[0]) {
-        shell = session->shell;
-    } else if (pw && pw->pw_shell) {
-        shell = pw->pw_shell;
-    } else {
-        shell = "/bin/sh";
-    }
-
-    pid = fork();
-    if (pid < 0) {
-        perror("fork");
-        return -1;
-    }
-
-    if (pid == 0) {
-        close(master_fd);
-        setgid(pw->pw_gid);
-        setuid(pw->pw_uid);
-
-        setsid();
-
-        dup2(slave_fd, STDIN_FILENO);
-        dup2(slave_fd, STDOUT_FILENO);
-        dup2(slave_fd, STDERR_FILENO);
-
-        if (ioctl(slave_fd, TIOCSCTTY, 0) < 0) {
-            perror("ioctl TIOCSCTTY");
-            exit(1);
-        }
-
-        struct winsize ws;
-        ws.ws_row = session->ws_row > 0 ? session->ws_row : 24;
-        ws.ws_col = session->ws_col > 0 ? session->ws_col : 80;
-        ws.ws_xpixel = 0;
-        ws.ws_ypixel = 0;
-        ioctl(slave_fd, TIOCSWINSZ, &ws);
-
-        close(slave_fd);
-
-        if (session->login_flag) {
-            clearenv();
-            setenv("HOME", pw->pw_dir, 1);
-            setenv("USER", pw->pw_name, 1);
-            setenv("SHELL", shell, 1);
-            setenv("TERM", "linux", 1);
-            setenv("LOGNAME", pw->pw_name, 1);
-            setenv("PATH", "/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin", 1);
-        } else if (session->env_vars[0] && !session->preserve_env) {
-            extern char **environ;
-            environ = NULL;
-            char *env_buf = session->env_vars;
-            while (*env_buf) {
-                putenv(env_buf);
-                env_buf += strlen(env_buf) + 1;
-            }
-        }
-
-        if (session->login_flag) {
-            char *base = strrchr(shell, '/');
-            base = base ? base + 1 : shell;
-            snprintf(login_shell, sizeof(login_shell), "-%.*s", (int)(sizeof(login_shell) - 2), base);
-            args[arg_idx++] = login_shell;
-            if (session->command[0]) {
-                args[arg_idx++] = "-c";
-                args[arg_idx++] = session->command;
-            }
-        } else {
-            args[arg_idx++] = shell;
-            if (session->command[0]) {
-                args[arg_idx++] = "-c";
-                args[arg_idx++] = session->command;
-            }
-        }
-
-        args[arg_idx] = NULL;
-        execv(shell, args);
-        perror("execv");
-        exit(1);
-    }
-
-    close(slave_fd);
-    return pid;
 }
