@@ -12,6 +12,8 @@
 #define SOCKET_PATH "/tmp/sshlike.sock"
 #define MAX_BUF 4096
 #define MAX_PASS 128
+#define MAX_CMD 1024
+#define MAX_SHELL 256
 #define AUTH_OK 0
 #define AUTH_FAIL 1
 
@@ -22,6 +24,18 @@ struct auth_req {
 
 struct auth_resp {
     int status;
+};
+
+struct session_req {
+    int login_flag;
+    char command[MAX_CMD];
+    char shell[MAX_SHELL];
+    int preserve_env;
+};
+
+struct client_request {
+    struct auth_req auth;
+    struct session_req session;
 };
 
 #endif

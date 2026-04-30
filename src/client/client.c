@@ -1,4 +1,6 @@
+#include "client.h"
 #include "common.h"
+#include "server.h"
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <stdio.h>
@@ -8,6 +10,8 @@
 #include <termios.h>
 #include <signal.h>
 #include <sys/select.h>
+#include <getopt.h>
+#include <pwd.h>
 
 static struct termios orig_termios;
 
@@ -58,15 +62,83 @@ void sigint_handler(int sig) {
     exit(0);
 }
 
-int main(int argc, char *argv[]) {
+int client_main(int argc, char *argv[]) {
     int fd;
     struct sockaddr_un addr;
-    struct auth_req req;
+    struct client_request req;
     struct auth_resp resp;
     char buf[MAX_BUF];
     fd_set fds;
     int maxfd;
     ssize_t n;
+    int opt;
+    struct option long_options[] = {
+        {"preserve-environment", no_argument, 0, 'm'},
+        {"group", required_argument, 0, 'g'},
+        {"supp-group", required_argument, 0, 'G'},
+        {"login", no_argument, 0, 'l'},
+        {"command", required_argument, 0, 'c'},
+        {"shell", required_argument, 0, 's'},
+        {"pty", no_argument, 0, 'P'},
+        {"no-pty", no_argument, 0, 'T'},
+        {"help", no_argument, 0, 'h'},
+        {"version", no_argument, 0, 'V'},
+        {0, 0, 0, 0}
+    };
+    char *target_user = NULL;
+
+    memset(&req, 0, sizeof(req));
+    req.session.login_flag = 1;
+
+    while ((opt = getopt_long(argc, argv, "mpg:G:lc:s:PTVh", long_options, NULL)) != -1) {
+        switch (opt) {
+            case 'm':
+            case 'p':
+                req.session.preserve_env = 1;
+                break;
+            case 'g':
+                break;
+            case 'G':
+                break;
+            case 'l':
+            case '-':
+                req.session.login_flag = 1;
+                break;
+            case 'c':
+                strncpy(req.session.command, optarg, MAX_CMD - 1);
+                break;
+            case 's':
+                strncpy(req.session.shell, optarg, MAX_SHELL - 1);
+                break;
+            case 'P':
+                break;
+            case 'T':
+                break;
+        case 'V':
+            printf("sshlike 1.0\n");
+            return 0;
+        case 'h':
+        default:
+            printf("Usage: %s [options] [-] [<user>]\n", argv[0]);
+            printf("Use --help for full options\n");
+            return 0;
+        }
+    }
+
+    if (optind < argc) {
+        if (strcmp(argv[optind], "-") == 0) {
+            req.session.login_flag = 1;
+            optind++;
+        }
+        if (optind < argc) {
+            target_user = argv[optind];
+            strncpy(req.auth.username, target_user, sizeof(req.auth.username) - 1);
+        }
+    }
+
+    if (req.auth.username[0] == '\0') {
+        strncpy(req.auth.username, "root", sizeof(req.auth.username) - 1);
+    }
 
     signal(SIGINT, sigint_handler);
 
@@ -86,19 +158,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("Username: ");
-    fflush(stdout);
-    if (!fgets(req.username, sizeof(req.username), stdin)) {
-        fprintf(stderr, "Failed to read username\n");
-        close(fd);
-        return 1;
-    }
-    req.username[strcspn(req.username, "\n")] = '\0';
-
-    read_password(req.password, sizeof(req.password));
+    read_password(req.auth.password, sizeof(req.auth.password));
 
     if (write(fd, &req, sizeof(req)) != sizeof(req)) {
-        perror("write auth req");
+        perror("write request");
         close(fd);
         return 1;
     }
@@ -115,7 +178,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("Authenticated. Starting terminal...\n");
     enable_raw_mode();
 
     while (1) {

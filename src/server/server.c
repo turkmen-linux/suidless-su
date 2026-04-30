@@ -2,6 +2,7 @@
 #include "auth.h"
 #include "pty.h"
 #include "common.h"
+#include "client.h"
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/stat.h>
@@ -11,6 +12,8 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <pwd.h>
+#include <sys/types.h>
 
 static int server_fd = -1;
 
@@ -60,28 +63,34 @@ int server_init(void) {
 }
 
 void server_handle_client(int client_fd) {
-    struct auth_req req;
+    struct client_request req;
     struct auth_resp resp;
     ssize_t n;
     pid_t shell_pid;
     int master_fd, slave_fd;
     char slave_name[64];
+    struct passwd *pw;
 
     n = read(client_fd, &req, sizeof(req));
     if (n != sizeof(req)) {
         return;
     }
 
-    if (auth_validate(req.username, req.password) == AUTH_OK) {
+    if (auth_validate(req.auth.username, req.auth.password) == AUTH_OK) {
         resp.status = AUTH_OK;
         write(client_fd, &resp, sizeof(resp));
+
+        pw = getpwnam(req.auth.username);
+        if (!pw) {
+            return;
+        }
 
         if (pty_allocate(&master_fd, &slave_fd, slave_name, sizeof(slave_name)) < 0) {
             return;
         }
 
         pty_setup_terminal(slave_fd);
-        shell_pid = pty_fork_shell(master_fd, slave_fd, slave_name);
+        shell_pid = pty_fork_shell(master_fd, slave_fd, slave_name, &req.session, pw);
 
         if (shell_pid > 0) {
             char buf[MAX_BUF];
@@ -140,4 +149,20 @@ void server_run(int fd) {
         }
         close(client_fd);
     }
+}
+
+int server_main(int argc, char *argv[]) {
+    int fd;
+
+    fd = server_init();
+    if (fd < 0) {
+        fprintf(stderr, "Failed to initialize server\n");
+        return 1;
+    }
+
+    printf("Server listening on %s\n", SOCKET_PATH);
+    server_run(fd);
+    server_cleanup();
+
+    return 0;
 }

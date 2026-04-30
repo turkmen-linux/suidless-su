@@ -4,5 +4,6 @@
 int server_init(void);
 void server_run(int fd);
 void server_cleanup(void);
+int server_main(int argc, char *argv[]);
 
 #endif
