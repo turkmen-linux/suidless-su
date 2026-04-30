@@ -10,8 +10,10 @@
 #include <termios.h>
 #include <signal.h>
 #include <sys/select.h>
+#include <sys/ioctl.h>
 #include <getopt.h>
 #include <pwd.h>
+#include <ctype.h>
 
 static struct termios orig_termios;
 
@@ -141,6 +143,30 @@ int client_main(int argc, char *argv[]) {
     }
 
     signal(SIGINT, sigint_handler);
+
+    if (!req.session.preserve_env) {
+        char *env_buf = req.session.env_vars;
+        char *env_end = env_buf + sizeof(req.session.env_vars);
+        extern char **environ;
+        for (char **e = environ; *e && env_buf < env_end - 1; e++) {
+            size_t len = strlen(*e);
+            if (env_buf + len + 1 < env_end) {
+                memcpy(env_buf, *e, len);
+                env_buf += len;
+                *env_buf++ = '\0';
+            }
+        }
+        *env_buf = '\0';
+    }
+
+    struct winsize ws;
+    if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) == 0) {
+        req.session.ws_row = ws.ws_row;
+        req.session.ws_col = ws.ws_col;
+    } else {
+        req.session.ws_row = 24;
+        req.session.ws_col = 80;
+    }
 
     fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {

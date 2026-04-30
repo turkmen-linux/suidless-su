@@ -97,8 +97,8 @@ pid_t pty_fork_shell(int master_fd, int slave_fd, const char *slave_name, struct
 
     if (pid == 0) {
         close(master_fd);
-        setuid(pw->pw_uid);
         setgid(pw->pw_gid);
+        setuid(pw->pw_uid);
 
         setsid();
 
@@ -111,59 +111,48 @@ pid_t pty_fork_shell(int master_fd, int slave_fd, const char *slave_name, struct
             exit(1);
         }
 
+        struct winsize ws;
+        ws.ws_row = session->ws_row > 0 ? session->ws_row : 24;
+        ws.ws_col = session->ws_col > 0 ? session->ws_col : 80;
+        ws.ws_xpixel = 0;
+        ws.ws_ypixel = 0;
+        ioctl(slave_fd, TIOCSWINSZ, &ws);
+
         close(slave_fd);
+
+        if (session->login_flag) {
+            clearenv();
+            setenv("HOME", pw->pw_dir, 1);
+            setenv("USER", pw->pw_name, 1);
+            setenv("SHELL", shell, 1);
+            setenv("TERM", "linux", 1);
+            setenv("LOGNAME", pw->pw_name, 1);
+            setenv("PATH", "/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin", 1);
+        } else if (session->env_vars[0] && !session->preserve_env) {
+            extern char **environ;
+            environ = NULL;
+            char *env_buf = session->env_vars;
+            while (*env_buf) {
+                putenv(env_buf);
+                env_buf += strlen(env_buf) + 1;
+            }
+        }
 
         if (session->login_flag) {
             char *base = strrchr(shell, '/');
             base = base ? base + 1 : shell;
-            snprintf(login_shell, sizeof(login_shell), "-%s", base);
+            snprintf(login_shell, sizeof(login_shell), "-%.*s", (int)(sizeof(login_shell) - 2), base);
             args[arg_idx++] = login_shell;
+            if (session->command[0]) {
+                args[arg_idx++] = "-c";
+                args[arg_idx++] = session->command;
+            }
         } else {
             args[arg_idx++] = shell;
-        }
-
-        if (session->command[0]) {
-            args[arg_idx++] = "-c";
-            args[arg_idx++] = session->command;
-        }
-
-        args[arg_idx] = NULL;
-        execv(shell, args);
-        perror("execv");
-        exit(1);
-    }
-
-    if (pid == 0) {
-        close(master_fd);
-        setuid(pw->pw_uid);
-        setgid(pw->pw_gid);
-
-        setsid();
-
-        dup2(slave_fd, STDIN_FILENO);
-        dup2(slave_fd, STDOUT_FILENO);
-        dup2(slave_fd, STDERR_FILENO);
-
-        if (ioctl(slave_fd, TIOCSCTTY, 0) < 0) {
-            perror("ioctl TIOCSCTTY");
-            exit(1);
-        }
-
-        close(slave_fd);
-
-        args[arg_idx++] = shell;
-
-        if (session->login_flag) {
-            char *base = strrchr(shell, '/');
-            base = base ? base + 1 : shell;
-            char login_shell[256];
-            snprintf(login_shell, sizeof(login_shell), "-%s", base);
-            args[arg_idx++] = login_shell;
-        }
-
-        if (session->command[0]) {
-            args[arg_idx++] = "-c";
-            args[arg_idx++] = session->command;
+            if (session->command[0]) {
+                args[arg_idx++] = "-c";
+                args[arg_idx++] = session->command;
+            }
         }
 
         args[arg_idx] = NULL;
