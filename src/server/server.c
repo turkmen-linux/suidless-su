@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include <pwd.h>
 #include <sys/types.h>
+#include <sys/select.h>
 
 static int server_fd = -1;
 
