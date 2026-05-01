@@ -90,6 +90,7 @@ int client_main(int argc, char *argv[]) {
 
     memset(&req, 0, sizeof(req));
     req.session.login_flag = 0;
+    getcwd(req.session.path, sizeof(req.session.path));
 
     while ((opt = getopt_long(argc, argv, "mpg:G:lc:s:PTh", long_options, NULL)) != -1) {
         switch (opt) {
