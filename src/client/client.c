@@ -90,7 +90,7 @@ int client_main(int argc, char *argv[]) {
     char *target_user = NULL;
 
     memset(&req, 0, sizeof(req));
-    req.session.login_flag = 1;
+    req.session.login_flag = 0;
 
     while ((opt = getopt_long(argc, argv, "mpg:G:lc:s:PTVh", long_options, NULL)) != -1) {
         switch (opt) {
