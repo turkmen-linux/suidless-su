@@ -1,4 +1,4 @@
-project('sshlike', 'c', version: '1.0')
+project('suidless-su', 'c', version: '1.0')
 
 inc = include_directories('include')
 

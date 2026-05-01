@@ -7,7 +7,7 @@ sources = files(
     'client/client.c'
 )
 
-executable('sshlike',
+executable('su',
     sources,
     include_directories: inc,
     c_args: [

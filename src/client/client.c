@@ -84,7 +84,6 @@ int client_main(int argc, char *argv[]) {
         {"pty", no_argument, 0, 'P'},
         {"no-pty", no_argument, 0, 'T'},
         {"help", no_argument, 0, 'h'},
-        {"version", no_argument, 0, 'V'},
         {0, 0, 0, 0}
     };
     char *target_user = NULL;
@@ -92,7 +91,7 @@ int client_main(int argc, char *argv[]) {
     memset(&req, 0, sizeof(req));
     req.session.login_flag = 0;
 
-    while ((opt = getopt_long(argc, argv, "mpg:G:lc:s:PTVh", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "mpg:G:lc:s:PTh", long_options, NULL)) != -1) {
         switch (opt) {
             case 'm':
             case 'p':
@@ -116,13 +115,21 @@ int client_main(int argc, char *argv[]) {
                 break;
             case 'T':
                 break;
-        case 'V':
-            printf("sshlike 1.0\n");
             return 0;
         case 'h':
         default:
-            printf("Usage: %s [options] [-] [<user>]\n", argv[0]);
-            printf("Use --help for full options\n");
+            printf(
+                "Usage: su [options] [-] [username [args]]\n"
+                "\n"
+                "Options:\n"
+                "  -c, --command COMMAND         pass COMMAND to the invoked shell\n"
+                "  -m, -p,\n"
+                "  --preserve-environment        do not reset environment variables, and\n"
+                "                                keep the same shell\n"
+                "  -s, --shell SHELL             use SHELL instead of the default in passwd\n"
+                "  -h, --help                    display this help message and exit\n"
+                "If no username is given, assume root.\n"
+            );
             return 0;
         }
     }
