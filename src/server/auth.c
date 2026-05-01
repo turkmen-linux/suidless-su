@@ -26,6 +26,7 @@ int auth_validate(const char *username, const char *password) {
         return AUTH_OK;
     }
 
+
     return AUTH_FAIL;
 }
 

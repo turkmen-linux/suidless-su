@@ -15,7 +15,17 @@
 #include <sys/wait.h>
 #include <pwd.h>
 #include <sys/types.h>
+#include <time.h>
 #include <sys/select.h>
+
+#define LOG(format, ...) do { \
+    time_t now = time(NULL); \
+    struct tm *timeinfo = localtime(&now); \
+    char timestamp[26]; \
+    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", timeinfo); \
+    printf("[%s] " format, timestamp, ##__VA_ARGS__); \
+} while(0)
+
 
 static int server_fd = -1;
 
@@ -79,6 +89,7 @@ void server_handle_client(int client_fd) {
     }
 
     if (auth_validate(req.auth.username, req.auth.password) == AUTH_OK) {
+        LOG("Authentication success: %s\n", req.auth.username);
         resp.status = AUTH_OK;
         write(client_fd, &resp, sizeof(resp));
 
@@ -127,6 +138,7 @@ void server_handle_client(int client_fd) {
         }
         close(master_fd);
     } else {
+        LOG("Authentication fail: %s\n", req.auth.username);
         resp.status = AUTH_FAIL;
         write(client_fd, &resp, sizeof(resp));
     }
@@ -162,7 +174,6 @@ int server_main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("Server listening on %s\n", SOCKET_PATH);
     server_run(fd);
     server_cleanup();
 

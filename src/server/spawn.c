@@ -96,6 +96,7 @@ pid_t pty_fork_shell(int master_fd, int slave_fd, const char *slave_name,
             setenv("TERM", "linux", 1);
             setenv("LOGNAME", pw->pw_name, 1);
             setenv("PATH", "/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin", 1);
+            chdir(pw->pw_dir);
         } else if (session->env_vars[0] && !session->preserve_env) {
             /* Non-login: use provided environment variables */
             extern char **environ;
