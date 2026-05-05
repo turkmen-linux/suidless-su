@@ -95,7 +95,6 @@ void server_handle_client(int client_fd) {
             resp.status = AUTH_OK;
             write(client_fd, &resp, sizeof(resp));
             break;
-
         } else {
             auth_delay+= 1000;
             usleep(auth_delay*1000);

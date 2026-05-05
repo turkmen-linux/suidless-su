@@ -4,7 +4,8 @@ sources = files(
     'server/auth.c',
     'server/pty.c',
     'server/spawn.c',
-    'client/client.c'
+    'client/client.c',
+    'client/su.c'
 )
 
 executable('su',

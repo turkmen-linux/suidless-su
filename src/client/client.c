@@ -11,7 +11,6 @@
 #include <signal.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
-#include <getopt.h>
 #include <pwd.h>
 #include <ctype.h>
 
@@ -64,91 +63,15 @@ void sigint_handler(int sig) {
     exit(0);
 }
 
-int client_main(int argc, char *argv[]) {
+int client_run(struct client_request req){
     int fd;
     struct sockaddr_un addr;
-    struct client_request req;
     struct auth_resp resp;
     char buf[MAX_BUF];
     fd_set fds;
     int maxfd;
     ssize_t n;
-    int opt;
-    struct option long_options[] = {
-        {"preserve-environment", no_argument, 0, 'm'},
-        {"group", required_argument, 0, 'g'},
-        {"supp-group", required_argument, 0, 'G'},
-        {"login", no_argument, 0, 'l'},
-        {"command", required_argument, 0, 'c'},
-        {"shell", required_argument, 0, 's'},
-        {"pty", no_argument, 0, 'P'},
-        {"no-pty", no_argument, 0, 'T'},
-        {"help", no_argument, 0, 'h'},
-        {0, 0, 0, 0}
-    };
-    char *target_user = NULL;
 
-    memset(&req, 0, sizeof(req));
-    req.session.login_flag = 0;
-    getcwd(req.session.path, sizeof(req.session.path));
-
-    while ((opt = getopt_long(argc, argv, "mpg:G:lc:s:PTh", long_options, NULL)) != -1) {
-        switch (opt) {
-            case 'm':
-            case 'p':
-                req.session.preserve_env = 1;
-                break;
-            case 'g':
-                break;
-            case 'G':
-                break;
-            case 'l':
-            case '-':
-                req.session.login_flag = 1;
-                break;
-            case 'c':
-                strncpy(req.session.command, optarg, MAX_CMD - 1);
-                break;
-            case 's':
-                strncpy(req.session.shell, optarg, MAX_SHELL - 1);
-                break;
-            case 'P':
-                break;
-            case 'T':
-                break;
-            return 0;
-        case 'h':
-        default:
-            printf(
-                "Usage: su [options] [-] [username [args]]\n"
-                "\n"
-                "Options:\n"
-                "  -c, --command COMMAND         pass COMMAND to the invoked shell\n"
-                "  -m, -p,\n"
-                "  --preserve-environment        do not reset environment variables, and\n"
-                "                                keep the same shell\n"
-                "  -s, --shell SHELL             use SHELL instead of the default in passwd\n"
-                "  -h, --help                    display this help message and exit\n"
-                "If no username is given, assume root.\n"
-            );
-            return 0;
-        }
-    }
-
-    if (optind < argc) {
-        if (strcmp(argv[optind], "-") == 0) {
-            req.session.login_flag = 1;
-            optind++;
-        }
-        if (optind < argc) {
-            target_user = argv[optind];
-            strncpy(req.auth.username, target_user, sizeof(req.auth.username) - 1);
-        }
-    }
-
-    if (req.auth.username[0] == '\0') {
-        strncpy(req.auth.username, "root", sizeof(req.auth.username) - 1);
-    }
 
     signal(SIGINT, sigint_handler);
 
@@ -245,3 +168,5 @@ int client_main(int argc, char *argv[]) {
     close(fd);
     return 0;
 }
+
+
