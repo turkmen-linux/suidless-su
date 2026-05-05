@@ -82,67 +82,73 @@ void server_handle_client(int client_fd) {
     int master_fd, slave_fd;
     char slave_name[64];
     struct passwd *pw;
+    size_t auth_delay = 0;
 
-    n = read(client_fd, &req, sizeof(req));
-    if (n != sizeof(req)) {
+    while(1){
+        n = read(client_fd, &req, sizeof(req));
+        if (n != sizeof(req)) {
+            return;
+        }
+        if (auth_validate(req.auth.username, req.auth.password) == AUTH_OK) {
+            LOG("Authentication success: %s\n", req.auth.username);
+            usleep(auth_delay*1000);
+            resp.status = AUTH_OK;
+            write(client_fd, &resp, sizeof(resp));
+            break;
+
+        } else {
+            auth_delay+= 1000;
+            usleep(auth_delay*1000);
+            LOG("Authentication fail: %s\n", req.auth.username);
+            resp.status = AUTH_FAIL;
+            write(client_fd, &resp, sizeof(resp));
+        }
+    }
+
+    pw = getpwnam(req.auth.username);
+    if (!pw) {
         return;
     }
 
-    if (auth_validate(req.auth.username, req.auth.password) == AUTH_OK) {
-        LOG("Authentication success: %s\n", req.auth.username);
-        resp.status = AUTH_OK;
-        write(client_fd, &resp, sizeof(resp));
-
-        pw = getpwnam(req.auth.username);
-        if (!pw) {
-            return;
-        }
-
-        if (pty_allocate(&master_fd, &slave_fd, slave_name, sizeof(slave_name)) < 0) {
-            return;
-        }
-
-        pty_setup_terminal(slave_fd);
-        shell_pid = pty_fork_shell(master_fd, slave_fd, slave_name, &req.session, pw);
-
-        if (shell_pid > 0) {
-            char buf[MAX_BUF];
-            fd_set fds;
-            int maxfd;
-
-            while (1) {
-                FD_ZERO(&fds);
-                FD_SET(client_fd, &fds);
-                FD_SET(master_fd, &fds);
-                maxfd = (client_fd > master_fd ? client_fd : master_fd) + 1;
-
-                if (select(maxfd, &fds, NULL, NULL, NULL) < 0) {
-                    break;
-                }
-
-                if (FD_ISSET(client_fd, &fds)) {
-                    n = read(client_fd, buf, sizeof(buf));
-                    if (n <= 0) break;
-                    write(master_fd, buf, n);
-                }
-
-                if (FD_ISSET(master_fd, &fds)) {
-                    n = read(master_fd, buf, sizeof(buf));
-                    if (n <= 0) break;
-                    write(client_fd, buf, n);
-                }
-            }
-
-            kill(shell_pid, SIGTERM);
-            waitpid(shell_pid, NULL, 0);
-        }
-        close(master_fd);
-    } else {
-        LOG("Authentication fail: %s\n", req.auth.username);
-        resp.status = AUTH_FAIL;
-        write(client_fd, &resp, sizeof(resp));
+    if (pty_allocate(&master_fd, &slave_fd, slave_name, sizeof(slave_name)) < 0) {
+        return;
     }
 
+    pty_setup_terminal(slave_fd);
+    shell_pid = pty_fork_shell(master_fd, slave_fd, slave_name, &req.session, pw);
+
+    if (shell_pid > 0) {
+        char buf[MAX_BUF];
+        fd_set fds;
+        int maxfd;
+
+        while (1) {
+            FD_ZERO(&fds);
+            FD_SET(client_fd, &fds);
+            FD_SET(master_fd, &fds);
+            maxfd = (client_fd > master_fd ? client_fd : master_fd) + 1;
+
+            if (select(maxfd, &fds, NULL, NULL, NULL) < 0) {
+                break;
+            }
+
+            if (FD_ISSET(client_fd, &fds)) {
+                n = read(client_fd, buf, sizeof(buf));
+                if (n <= 0) break;
+                write(master_fd, buf, n);
+            }
+
+            if (FD_ISSET(master_fd, &fds)) {
+                n = read(master_fd, buf, sizeof(buf));
+                if (n <= 0) break;
+                write(client_fd, buf, n);
+            }
+        }
+
+        kill(shell_pid, SIGTERM);
+        waitpid(shell_pid, NULL, 0);
+    }
+    close(master_fd);
     close(client_fd);
 }
 

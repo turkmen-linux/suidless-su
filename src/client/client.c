@@ -192,24 +192,28 @@ int client_main(int argc, char *argv[]) {
         return 1;
     }
 
-    read_password(req.auth.password, sizeof(req.auth.password));
+    while(1){
 
-    if (write(fd, &req, sizeof(req)) != sizeof(req)) {
-        perror("write request");
-        close(fd);
-        return 1;
-    }
+        read_password(req.auth.password, sizeof(req.auth.password));
 
-    if (read(fd, &resp, sizeof(resp)) != sizeof(resp)) {
-        perror("read auth resp");
-        close(fd);
-        return 1;
-    }
+        if (write(fd, &req, sizeof(req)) != sizeof(req)) {
+            perror("write request");
+            close(fd);
+            return 1;
+        }
 
-    if (resp.status != AUTH_OK) {
-        fprintf(stderr, "Authentication failed\n");
-        close(fd);
-        return 1;
+        if (read(fd, &resp, sizeof(resp)) != sizeof(resp)) {
+            perror("read auth resp");
+            close(fd);
+            return 1;
+        }
+
+        if (resp.status != AUTH_OK) {
+            fprintf(stderr, "Authentication failed\n");
+            continue;
+        } else{
+            break;
+        }
     }
 
     enable_raw_mode();
