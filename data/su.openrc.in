@@ -1,0 +1,7 @@
+#!/sbin/openrc-run
+
+command="@prefix@/@bindir@/su"
+pidfile="/var/run/suidless.pid"
+name="Suidless su "
+description="Suidless su daemon"
+

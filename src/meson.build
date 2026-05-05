@@ -17,5 +17,6 @@ executable('su',
         '-D_GNU_SOURCE'
     ],
     link_args: ['-lcrypt'],
+    install_dir: get_option('prefix') / get_option('bindir'),
     install: true
 )
