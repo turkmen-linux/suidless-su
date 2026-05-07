@@ -15,6 +15,19 @@
 #include <ctype.h>
 
 static struct termios orig_termios;
+static int winch_pipe[2] = {-1, -1};
+
+void sigwinch_handler(int sig) {
+    write(winch_pipe[1], "", 1);
+}
+
+static void send_winch(int fd) {
+    struct winsize ws;
+    if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) != 0) return;
+    char type = MSG_WINCH;
+    write(fd, &type, 1);
+    write(fd, &ws, sizeof(ws));
+}
 
 void disable_raw_mode(void) {
     tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
@@ -74,6 +87,8 @@ int client_run(struct client_request req){
 
 
     signal(SIGINT, sigint_handler);
+    signal(SIGWINCH, sigwinch_handler);
+    pipe(winch_pipe);
 
     if (!req.session.preserve_env) {
         char *env_buf = req.session.env_vars;
@@ -145,15 +160,28 @@ int client_run(struct client_request req){
         FD_ZERO(&fds);
         FD_SET(STDIN_FILENO, &fds);
         FD_SET(fd, &fds);
-        maxfd = (STDIN_FILENO > fd ? STDIN_FILENO : fd) + 1;
+        FD_SET(winch_pipe[0], &fds);
+        maxfd = fd;
+        if (STDIN_FILENO > maxfd) maxfd = STDIN_FILENO;
+        if (winch_pipe[0] > maxfd) maxfd = winch_pipe[0];
+        maxfd++;
 
         if (select(maxfd, &fds, NULL, NULL, NULL) < 0) {
+            if (errno == EINTR) continue;
             break;
+        }
+
+        if (FD_ISSET(winch_pipe[0], &fds)) {
+            char c;
+            read(winch_pipe[0], &c, 1);
+            send_winch(fd);
         }
 
         if (FD_ISSET(STDIN_FILENO, &fds)) {
             n = read(STDIN_FILENO, buf, sizeof(buf));
             if (n <= 0) break;
+            char type = MSG_DATA;
+            write(fd, &type, 1);
             write(fd, buf, n);
         }
 

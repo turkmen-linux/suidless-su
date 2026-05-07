@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include <pwd.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 #include <time.h>
 #include <sys/select.h>
 
@@ -132,9 +133,24 @@ void server_handle_client(int client_fd) {
             }
 
             if (FD_ISSET(client_fd, &fds)) {
-                n = read(client_fd, buf, sizeof(buf));
-                if (n <= 0) break;
-                write(master_fd, buf, n);
+                char type;
+                if (read(client_fd, &type, 1) != 1) break;
+
+                if (type == MSG_DATA) {
+                    n = read(client_fd, buf, sizeof(buf));
+                    if (n <= 0) break;
+                    write(master_fd, buf, n);
+                } else if (type == MSG_WINCH) {
+                    struct winsize ws;
+                    ssize_t total = 0;
+                    while (total < (ssize_t)sizeof(ws)) {
+                        ssize_t r = read(client_fd, (char*)&ws + total, sizeof(ws) - total);
+                        if (r <= 0) break;
+                        total += r;
+                    }
+                    if (total == (ssize_t)sizeof(ws))
+                        ioctl(master_fd, TIOCSWINSZ, &ws);
+                }
             }
 
             if (FD_ISSET(master_fd, &fds)) {

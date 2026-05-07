@@ -19,6 +19,9 @@
 #define AUTH_OK 0
 #define AUTH_FAIL 1
 
+#define MSG_DATA  0x01
+#define MSG_WINCH 0x02
+
 struct auth_req {
     char username[64];
     char password[128];
