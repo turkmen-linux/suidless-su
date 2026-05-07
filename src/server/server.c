@@ -142,14 +142,9 @@ void server_handle_client(int client_fd) {
                     write(master_fd, buf, n);
                 } else if (type == MSG_WINCH) {
                     struct winsize ws;
-                    ssize_t total = 0;
-                    while (total < (ssize_t)sizeof(ws)) {
-                        ssize_t r = read(client_fd, (char*)&ws + total, sizeof(ws) - total);
-                        if (r <= 0) break;
-                        total += r;
-                    }
-                    if (total == (ssize_t)sizeof(ws))
-                        ioctl(master_fd, TIOCSWINSZ, &ws);
+                    ssize_t r = read(client_fd, (char*)&ws, sizeof(ws));
+                    if (r <= 0) break;
+                    ioctl(master_fd, TIOCSWINSZ, &ws);
                 }
             }
 
