@@ -2,6 +2,7 @@
 
 command="@prefix@/@bindir@/su"
 command_args="--daemon"
+command_background=true
 pidfile="/var/run/suidless.pid"
 name="Suidless su "
 description="Suidless su daemon"
