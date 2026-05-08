@@ -89,11 +89,16 @@ pid_t pty_fork_shell(int master_fd, int slave_fd, const char *slave_name,
         /* Set up environment based on login flag */
         if (session->login_flag) {
             /* Login shell: clear env and set minimal login environment */
+            char* term = getenv("TERM");
             clearenv();
             setenv("HOME", pw->pw_dir, 1);
             setenv("USER", pw->pw_name, 1);
             setenv("SHELL", shell, 1);
-            setenv("TERM", "linux", 1);
+            if(term){
+                setenv("TERM", term, 1);
+            } else {
+                setenv("TERM", "linux", 1);
+            }
             setenv("LOGNAME", pw->pw_name, 1);
             setenv("PATH", "/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin", 1);
             chdir(pw->pw_dir);
