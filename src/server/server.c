@@ -19,13 +19,6 @@
 #include <time.h>
 #include <sys/select.h>
 
-#define LOG(format, ...) do { \
-    time_t now = time(NULL); \
-    struct tm *timeinfo = localtime(&now); \
-    char timestamp[26]; \
-    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", timeinfo); \
-    printf("[%s] " format, timestamp, ##__VA_ARGS__); \
-} while(0)
 
 
 static int server_fd = -1;
@@ -77,50 +70,20 @@ int server_init(void) {
 
 void server_handle_client(int client_fd) {
     struct client_request req;
-    struct auth_resp resp;
-    ssize_t n;
+    struct passwd *pw;
     pid_t shell_pid;
+    ssize_t n;
     int master_fd, slave_fd;
     char slave_name[64];
-    struct passwd *pw;
-    size_t auth_delay = 0;
 
-    struct ucred cred;
-    socklen_t len = sizeof(cred);
-    if (getsockopt(client_fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) == 0) {
-        LOG("Socket: pid=%d uid=%d gid=%d\n", cred.pid, cred.uid, cred.gid);
-    } else {
-        perror("getsockopt");
-    }
-            
 
-    size_t auth_try = 1;
-    while(1){
-        n = read(client_fd, &req, sizeof(req));
-        if (n != sizeof(req)) {
-            return;
-        }
-        if (auth_validate(req.auth.username, req.auth.password) == AUTH_OK) {
-            LOG("Authentication success: %s\n", req.auth.username);
-            usleep(auth_delay*1000);
-            resp.status = AUTH_OK;
-            write(client_fd, &resp, sizeof(resp));
-            break;
-        } else {
-            auth_delay+= 500;
-            usleep(auth_delay*1000);
-            LOG("Authentication fail: %s try:%ld\n", req.auth.username, auth_try);
-            resp.status = AUTH_FAIL;
-            write(client_fd, &resp, sizeof(resp));
-            auth_try++;
-            if(auth_try >= 3){
-                return;
-            }
-        }
+    if(!auth_socket(client_fd, &req)){
+        return;
     }
 
     pw = getpwnam(req.auth.username);
     if (!pw) {
+        puts(req.auth.username);
         return;
     }
 

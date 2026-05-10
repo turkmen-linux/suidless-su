@@ -60,8 +60,7 @@ void read_password(char *buf, size_t len) {
         perror("tcsetattr");
         return;
     }
-    printf("Password: ");
-    fflush(stdout);
+
     if (fgets(buf, len, stdin)) {
         buf[strcspn(buf, "\n")] = '\0';
     } else {
@@ -130,28 +129,35 @@ int client_run(struct client_request req){
         close(fd);
         return 1;
     }
+    if (write(fd, &req, sizeof(req)) != sizeof(req)) {
+        perror("write request");
+        close(fd);
+        return 1;
+    }
 
     while(1){
-
-        read_password(req.auth.password, sizeof(req.auth.password));
-
-        if (write(fd, &req, sizeof(req)) != sizeof(req)) {
-            perror("write request");
-            close(fd);
-            return 1;
-        }
 
         if (read(fd, &resp, sizeof(resp)) != sizeof(resp)) {
             perror("read auth resp");
             close(fd);
             return 1;
         }
-
-        if (resp.status != AUTH_OK) {
+        
+        if(resp.status == AUTH_PROMPT) {
+            printf(resp.prompt);
+            fflush(stdout);
+            read_password(req.auth.password, sizeof(req.auth.password));
+            if (write(fd, &req, sizeof(req)) != sizeof(req)) {
+                perror("write request");
+                close(fd);
+                return 1;
+            }
+            continue;
+        }else if (resp.status == AUTH_OK) {
+            break;
+        } else if (resp.status == AUTH_FAIL){
             fprintf(stderr, "Authentication failed\n");
             continue;
-        } else{
-            break;
         }
     }
 

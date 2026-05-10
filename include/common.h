@@ -8,6 +8,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <time.h>
+
 
 #define SOCKET_PATH "/run/su.sock"
 #define MAX_BUF 4096
@@ -18,18 +20,28 @@
 #define MAX_ENV 16384
 #define AUTH_OK 0
 #define AUTH_FAIL 1
+#define AUTH_PROMPT 1
 
 #define MSG_DATA  0x01
 #define MSG_WINCH 0x02
 
 struct auth_req {
     char username[64];
-    char password[128];
+    char password[MAX_PASS];
 };
 
 struct auth_resp {
     int status;
+    char prompt[MAX_BUF];
 };
+
+#define LOG(format, ...) do { \
+    time_t now = time(NULL); \
+    struct tm *timeinfo = localtime(&now); \
+    char timestamp[26]; \
+    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", timeinfo); \
+    printf("[%s] " format, timestamp, ##__VA_ARGS__); \
+} while(0)
 
 struct session_req {
     int login_flag;
