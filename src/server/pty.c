@@ -83,8 +83,11 @@ int pty_setup_terminal(int slave_fd) {
         return -1;
     }
     cfmakeraw(&term);
+    cfsetispeed(&term, B115200);
+    cfsetospeed(&term, B115200);
+    term.c_iflag |= ICRNL | IXON;
+    term.c_oflag |= OPOST | ONLCR;
     term.c_lflag |= (ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHOKE);
-    term.c_oflag |= OPOST;
     if (tcsetattr(slave_fd, TCSANOW, &term) < 0) {
         perror("tcsetattr");
         return -1;
