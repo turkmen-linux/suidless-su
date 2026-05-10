@@ -85,6 +85,7 @@ void server_handle_client(int client_fd) {
     struct passwd *pw;
     size_t auth_delay = 0;
 
+    size_t auth_try = 1;
     while(1){
         n = read(client_fd, &req, sizeof(req));
         if (n != sizeof(req)) {
@@ -97,11 +98,15 @@ void server_handle_client(int client_fd) {
             write(client_fd, &resp, sizeof(resp));
             break;
         } else {
-            auth_delay+= 1000;
+            auth_delay+= 500;
             usleep(auth_delay*1000);
-            LOG("Authentication fail: %s\n", req.auth.username);
+            LOG("Authentication fail: %s try:%ld\n", req.auth.username, auth_try);
             resp.status = AUTH_FAIL;
             write(client_fd, &resp, sizeof(resp));
+            auth_try++;
+            if(auth_try >= 3){
+                return;
+            }
         }
     }
 
@@ -174,6 +179,13 @@ void server_run(int fd) {
         }
         if (fork() == 0) {
             close(fd);
+            struct ucred cred;
+            socklen_t len = sizeof(cred);
+            if (getsockopt(client_fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) == 0) {
+                LOG("Socket: pid=%d uid=%d gid=%d\n", cred.pid, cred.uid, cred.gid);
+            } else {
+                perror("getsockopt");
+            }
             server_handle_client(client_fd);
             exit(0);
         }
