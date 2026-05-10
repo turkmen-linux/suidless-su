@@ -5,7 +5,8 @@ sources = files(
     'server/pty.c',
     'server/spawn.c',
     'client/client.c',
-    'client/su.c'
+    'client/su.c',
+    'client/sudo.c'
 )
 
 executable('su',

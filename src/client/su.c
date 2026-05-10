@@ -5,7 +5,7 @@
 #include "client.h"
 #include "common.h"
 
-int client_main(int argc, char *argv[]) {
+int su_client_main(int argc, char *argv[]) {
     int opt;
     struct client_request req;
     struct option long_options[] = {

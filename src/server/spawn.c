@@ -11,6 +11,7 @@
 #include "common.h"
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -20,6 +21,37 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <stdlib.h>
+
+static void which(char* fullfilename, const char* cmd){
+    char* fullPath = strdup(getenv("PATH")); // Duplicate the PATH string
+
+    struct stat buffer;
+    int exists;
+    char* fileOrDirectory = (char*)cmd;
+    
+    /* check is exists */
+    exists = stat(cmd, &buffer);
+    if ( exists == 0 ) {
+        sprintf(fullfilename, "%s",  cmd);
+        return;
+    }
+
+    char *token = strtok(fullPath, ":");
+
+    /* walk through other tokens */
+    while( token != NULL ){
+        sprintf(fullfilename, "%s/%s", token, fileOrDirectory);
+        exists = stat(fullfilename, &buffer);
+        if ( exists == 0 ) {
+            free(fullPath); // Free the duplicated string
+            return;
+        }
+
+      token = strtok(NULL, ":"); /* next token */
+    }
+    free(fullPath);
+    return;
+}
 
 /*
  * Fork a child process and spawn a shell in the PTY slave.
@@ -123,7 +155,9 @@ pid_t pty_fork_shell(int master_fd, int slave_fd, const char *slave_name,
         }
         args[arg_idx] = NULL;
         
-        execv(args[0], args);
+        char cmd[1024];
+        which(cmd, args[0]);
+        execv(cmd, args);
         perror("execv");
         exit(1);
     }
@@ -132,3 +166,5 @@ pid_t pty_fork_shell(int master_fd, int slave_fd, const char *slave_name,
     close(slave_fd);
     return pid;
 }
+
+

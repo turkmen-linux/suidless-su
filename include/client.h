@@ -4,6 +4,7 @@
 #include "common.h"
 
 
-int client_main(int argc, char *argv[]);
+int su_client_main(int argc, char *argv[]);
+int sudo_client_main(int argc, char *argv[]);
 int client_run(struct client_request req);
 #endif

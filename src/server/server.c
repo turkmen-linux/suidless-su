@@ -85,6 +85,15 @@ void server_handle_client(int client_fd) {
     struct passwd *pw;
     size_t auth_delay = 0;
 
+    struct ucred cred;
+    socklen_t len = sizeof(cred);
+    if (getsockopt(client_fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) == 0) {
+        LOG("Socket: pid=%d uid=%d gid=%d\n", cred.pid, cred.uid, cred.gid);
+    } else {
+        perror("getsockopt");
+    }
+            
+
     size_t auth_try = 1;
     while(1){
         n = read(client_fd, &req, sizeof(req));
@@ -113,6 +122,20 @@ void server_handle_client(int client_fd) {
     pw = getpwnam(req.auth.username);
     if (!pw) {
         return;
+    }
+
+    /* log command */
+    if(req.session.command[0] == '\0'){
+        LOG("Command (%s): SHELL\n", req.auth.username);
+    } else {
+        char *cmd_buf = req.session.command;
+        char command[MAX_CMD] = "";
+        while (*cmd_buf) {
+            strcat(command, cmd_buf);
+            strcat(command, " ");
+            cmd_buf += strlen(cmd_buf)+1;
+        }
+        LOG("Command (%s): %s\n", req.auth.username, command);
     }
 
     if (pty_allocate(&master_fd, &slave_fd, slave_name, sizeof(slave_name)) < 0) {
@@ -179,13 +202,6 @@ void server_run(int fd) {
         }
         if (fork() == 0) {
             close(fd);
-            struct ucred cred;
-            socklen_t len = sizeof(cred);
-            if (getsockopt(client_fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) == 0) {
-                LOG("Socket: pid=%d uid=%d gid=%d\n", cred.pid, cred.uid, cred.gid);
-            } else {
-                perror("getsockopt");
-            }
             server_handle_client(client_fd);
             exit(0);
         }
