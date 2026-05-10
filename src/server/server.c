@@ -19,7 +19,7 @@
 #include <time.h>
 #include <sys/select.h>
 
-
+bool enable_pam;
 
 static int server_fd = -1;
 
@@ -76,10 +76,44 @@ void server_handle_client(int client_fd) {
     int master_fd, slave_fd;
     char slave_name[64];
 
-
-    if(!auth_socket(client_fd, &req)){
-        return;
+    struct ucred cred;
+    socklen_t len = sizeof(cred);
+    if (getsockopt(client_fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) == 0) {
+        LOG("Socket: pid=%d uid=%d gid=%d\n", cred.pid, cred.uid, cred.gid);
+    } else {
+        perror("getsockopt");
     }
+    req.cred = cred;
+    req.client_fd = client_fd;
+
+
+    // Check client is allowed
+    unsigned long long ino_client, dev_client;
+    unsigned long long ino_server, dev_server;
+    char client_exe[PATH_MAX];
+    sprintf(client_exe, "/proc/%d/exe", cred.pid);
+    get_file_id(client_exe, &ino_client, &dev_client);
+    get_file_id("/proc/self/exe", &ino_server, &dev_server);
+
+    if(ino_client != ino_server || dev_client != dev_server){
+        LOG("Illegal client %llu == %llu && %llu == %llu\n", ino_client, ino_server, dev_client, dev_server);
+        return ;
+    }
+
+
+#ifdef PAM
+    if(enable_pam){
+        if(!pam_auth_socket(&req)){
+            return;
+        }
+    } else {
+#endif
+        if(!crypt_auth_socket(&req)){
+            return;
+        }
+#ifdef PAM
+    }
+#endif
 
     pw = getpwnam(req.auth.username);
     if (!pw) {

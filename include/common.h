@@ -20,7 +20,7 @@
 #define MAX_ENV 16384
 #define AUTH_OK 0
 #define AUTH_FAIL 1
-#define AUTH_PROMPT 1
+#define AUTH_PROMPT 2
 
 #define MSG_DATA  0x01
 #define MSG_WINCH 0x02
@@ -57,6 +57,8 @@ struct session_req {
 struct client_request {
     struct auth_req auth;
     struct session_req session;
+    struct ucred cred;
+    int client_fd;
 };
 
 #endif

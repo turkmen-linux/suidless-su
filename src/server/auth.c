@@ -10,67 +10,48 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-bool auth_socket(int client_fd, struct client_request *req) {
+static int auth_validate(int client_fd, const char *username, const char *password);
+
+bool crypt_auth_socket(struct client_request *req) {
     ssize_t n;
     size_t auth_delay = 0;
     struct client_request rreq;
     
-    struct ucred cred;
-    socklen_t len = sizeof(cred);
-    if (getsockopt(client_fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) == 0) {
-        LOG("Socket: pid=%d uid=%d gid=%d\n", cred.pid, cred.uid, cred.gid);
-    } else {
-        perror("getsockopt");
-    }
-
-    // Check client is allowed
-    unsigned long long ino_client, dev_client;
-    unsigned long long ino_server, dev_server;
-    char client_exe[PATH_MAX];
-    sprintf(client_exe, "/proc/%d/exe", cred.pid);
-    get_file_id(client_exe, &ino_client, &dev_client);
-    get_file_id("/proc/self/exe", &ino_server, &dev_server);
-    
-    if(ino_client != ino_server || dev_client != dev_server){
-        LOG("Illegal client %llu == %llu && %llu == %llu\n", ino_client, ino_server, dev_client, dev_server);
-        return false;
-    }
-
     size_t auth_try = 1;
     int authenticated = AUTH_FAIL;
     while(1){
         struct auth_resp resp;
-        n = read(client_fd, &rreq, sizeof(rreq));
+        n = read(req->client_fd, &rreq, sizeof(rreq));
         if (n != sizeof(rreq)) {
             LOG("Invalid request\n");
             return false;
         }
-        if(cred.uid == 0){
+        if(req->cred.uid == 0){
             resp.status = AUTH_OK;
-            write(client_fd, &resp, sizeof(resp));
+            write(req->client_fd, &resp, sizeof(resp));
             break;
         }
         //printf("%d %s %s\n",authenticated,  rreq.auth.username, rreq.auth.password);
         if(rreq.auth.password[0] == '\0' && authenticated != AUTH_OK){
             resp.status = AUTH_PROMPT;
             strcpy(resp.prompt, "Password: ");
-            LOG("Prompt: %s\n", resp.prompt);
-            write(client_fd, &resp, sizeof(resp));
+            LOG("CRYPT Prompt: %s\n", resp.prompt);
+            write(req->client_fd, &resp, sizeof(resp));
             continue;
         }
-        authenticated = auth_validate(client_fd, rreq.auth.username, rreq.auth.password);
+        authenticated = auth_validate(req->client_fd, rreq.auth.username, rreq.auth.password);
         if (authenticated == AUTH_OK) {
             LOG("Authentication success: %s\n", rreq.auth.username);
             usleep(auth_delay*1000);
             resp.status = AUTH_OK;
-            write(client_fd, &resp, sizeof(resp));
+            write(req->client_fd, &resp, sizeof(resp));
             break;
         } else {
             auth_delay+= 500;
             usleep(auth_delay*1000);
             LOG("Authentication fail: %s try:%ld\n", rreq.auth.username, auth_try);
             resp.status = AUTH_FAIL;
-            write(client_fd, &resp, sizeof(resp));
+            write(req->client_fd, &resp, sizeof(resp));
             auth_try++;
             if(auth_try >= 3){
                 return false;
@@ -81,7 +62,7 @@ bool auth_socket(int client_fd, struct client_request *req) {
     return true;
 }
 
-int auth_validate(int client_fd, const char *username, const char *password) {
+static int auth_validate(int client_fd, const char *username, const char *password) {
 	(void) client_fd;
     struct spwd *sp;
     char *encrypted;

@@ -8,14 +8,25 @@
 #include <sys/types.h>
 #include <libgen.h>
 
+#ifdef PAM
+extern bool enable_pam;
+#endif
 int main(int argc, char *argv[]) {
     int daemon_mode = 0;
-
+#ifdef PAM
+    enable_pam = true;
+#endif
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--daemon") == 0) {
             daemon_mode = 1;
-            break;
+            continue;
         }
+#ifdef PAM
+        if (strcmp(argv[i], "--no-pam") == 0) {
+            enable_pam = false;
+            continue;
+        }
+#endif
     }
 
     if (daemon_mode) {

@@ -3,6 +3,7 @@ sources = files(
     'server/server.c',
     'server/pty.c',
     'server/spawn.c',
+    'server/auth.c',
     'client/client.c',
     'client/su.c',
     'client/sudo.c'
@@ -11,8 +12,7 @@ deps = []
 if get_option('pam')
     sources += ['server/pam.c']
     deps += [dependency('pam', required:true)]
-else
-    sources += ['server/auth.c']
+    add_project_arguments('-DPAM', language : 'c')
 endif
 
 executable('suidless-su',
