@@ -9,7 +9,7 @@ sources = files(
     'client/sudo.c'
 )
 
-executable('su',
+executable('suidless-su',
     sources,
     include_directories: inc,
     c_args: [
@@ -22,3 +22,11 @@ executable('su',
     install_dir: get_option('prefix') / get_option('bindir'),
     install: true
 )
+foreach tool : ['sudo', 'su']
+    install_symlink(
+        tool, 
+        install_dir: get_option('prefix') / get_option('bindir'),
+        pointing_to: 'suidless-su'
+    )
+    run_command(['ln', '-s', './src/suidless-su', meson.current_build_dir() + '/../'+tool])
+endforeach

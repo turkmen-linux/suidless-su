@@ -1,6 +1,6 @@
 #!/sbin/openrc-run
 
-command="@prefix@/@bindir@/su"
+command="@prefix@/@bindir@/suidless-su"
 command_args="--daemon"
 command_background=true
 pidfile="/var/run/suidless.pid"

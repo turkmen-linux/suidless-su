@@ -9,6 +9,7 @@ if get_option('service') == 'openrc'
     output : 'su',
     configuration : cdata,
     install: true,
-    install_dir: '/etc/init.d'	
+    install_dir: '/etc/init.d',
+    install_mode: 'rwxr-xr-x'
   )
 endif
