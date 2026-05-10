@@ -66,6 +66,7 @@ void read_password(char *buf, size_t len) {
         buf[strcspn(buf, "\n")] = '\0';
     } else {
         buf[0] = '\0';
+        clearerr(stdin);
     }
     tcsetattr(STDIN_FILENO, TCSANOW, &old);
     printf("\n");
