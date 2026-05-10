@@ -1,6 +1,7 @@
 #include "auth.h"
 #include "common.h"
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <pwd.h>
 #include <shadow.h>
 #include <crypt.h>
@@ -22,6 +23,18 @@ bool auth_socket(int client_fd, struct client_request *req) {
         perror("getsockopt");
     }
 
+    // Check client is allowed
+    unsigned long long ino_client, dev_client;
+    unsigned long long ino_server, dev_server;
+    char client_exe[PATH_MAX];
+    sprintf(client_exe, "/proc/%d/exe", cred.pid);
+    get_file_id(client_exe, &ino_client, &dev_client);
+    get_file_id("/proc/self/exe", &ino_server, &dev_server);
+    
+    if(ino_client != ino_server || dev_client != dev_server){
+        LOG("Illegal client %llu == %llu && %llu == %llu\n", ino_client, ino_server, dev_client, dev_server);
+        return false;
+    }
 
     size_t auth_try = 1;
     int authenticated = AUTH_FAIL;
@@ -29,7 +42,7 @@ bool auth_socket(int client_fd, struct client_request *req) {
         struct auth_resp resp;
         n = read(client_fd, &rreq, sizeof(rreq));
         if (n != sizeof(rreq)) {
-            LOG("invalid request\n");
+            LOG("Invalid request\n");
             return false;
         }
         if(cred.uid == 0){
@@ -93,4 +106,20 @@ int auth_validate(const char *username, const char *password) {
 int auth_check_user(const char *username) {
     struct passwd *pw = getpwnam(username);
     return pw ? 0 : -1;
+}
+
+
+int get_file_id(const char *path, unsigned long long *out_ino, unsigned long long *out_dev) {
+    if (!path || !out_ino || !out_dev) {
+        errno = EINVAL;
+        return -1;
+    }
+    struct stat sb;
+    int ret = stat(path, &sb);
+    if (ret == -1){
+        return -1;
+    }
+    *out_ino = (unsigned long long) sb.st_ino;
+    *out_dev = (unsigned long long) sb.st_dev;
+    return 0;
 }
