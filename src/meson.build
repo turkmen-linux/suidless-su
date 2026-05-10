@@ -1,22 +1,31 @@
 sources = files(
     'main.c',
     'server/server.c',
-    'server/auth.c',
     'server/pty.c',
     'server/spawn.c',
     'client/client.c',
     'client/su.c',
     'client/sudo.c'
 )
+deps = []
+if get_option('pam')
+    sources += ['server/pam.c']
+    deps += [dependency('pam', required:true)]
+else
+    sources += ['server/auth.c']
+endif
 
 executable('suidless-su',
     sources,
+    dependencies: deps,
     include_directories: inc,
     c_args: [
         '-fvisibility=hidden',
         '-D_POSIX_C_SOURCE=200809L',
         '-D_XOPEN_SOURCE=700',
-        '-D_GNU_SOURCE'
+        '-D_GNU_SOURCE',
+        '-Wall',
+        '-Werror'
     ],
     link_args: ['-lcrypt'],
     install_dir: get_option('prefix') / get_option('bindir'),

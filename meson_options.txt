@@ -1,1 +1,2 @@
+option('pam', type : 'boolean', value : true)
 option('service', type : 'string', value : 'openrc')

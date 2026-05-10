@@ -58,7 +58,7 @@ bool auth_socket(int client_fd, struct client_request *req) {
             write(client_fd, &resp, sizeof(resp));
             continue;
         }
-        authenticated = auth_validate(rreq.auth.username, rreq.auth.password);
+        authenticated = auth_validate(client_fd, rreq.auth.username, rreq.auth.password);
         if (authenticated == AUTH_OK) {
             LOG("Authentication success: %s\n", rreq.auth.username);
             usleep(auth_delay*1000);
@@ -81,7 +81,8 @@ bool auth_socket(int client_fd, struct client_request *req) {
     return true;
 }
 
-int auth_validate(const char *username, const char *password) {
+int auth_validate(int client_fd, const char *username, const char *password) {
+	(void) client_fd;
     struct spwd *sp;
     char *encrypted;
 
@@ -101,11 +102,6 @@ int auth_validate(const char *username, const char *password) {
 
 
     return AUTH_FAIL;
-}
-
-int auth_check_user(const char *username) {
-    struct passwd *pw = getpwnam(username);
-    return pw ? 0 : -1;
 }
 
 
