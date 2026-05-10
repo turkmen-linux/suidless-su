@@ -41,7 +41,18 @@ int client_main(int argc, char *argv[]) {
                 req.session.login_flag = 1;
                 break;
             case 'c':
-                strncpy(req.session.command, optarg, MAX_CMD - 1);
+                char* args[] = {"/bin/sh", "-c", optarg, NULL};
+                char *cmd_buf = req.session.command;
+                char *cmd_end = cmd_buf + sizeof(req.session.command);
+                for (char **e = args; *e && cmd_buf < cmd_end - 1; e++) {
+                    size_t len = strlen(*e);
+                    if (cmd_buf + len + 1 < cmd_end) {
+                        memcpy(cmd_buf, *e, len);
+                        cmd_buf += len;
+                        *cmd_buf++ = '\0';
+                    }
+                }
+                *cmd_buf = '\0';
                 break;
             case 's':
                 strncpy(req.session.shell, optarg, MAX_SHELL - 1);

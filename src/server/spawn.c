@@ -32,7 +32,6 @@ pid_t pty_fork_shell(int master_fd, int slave_fd, const char *slave_name,
                      struct session_req *session, struct passwd *pw) {
     pid_t pid;
     char *shell;
-    char login_shell[256];
     char *args[16];
     int arg_idx = 0;
 
@@ -113,28 +112,18 @@ pid_t pty_fork_shell(int master_fd, int slave_fd, const char *slave_name,
                 env_buf += strlen(env_buf) + 1;
             }
         }
-
-        /* Build argument list for exec */
-        if (session->login_flag) {
-            /* Prefix shell name with '-' for login shell */
-            char *base = strrchr(shell, '/');
-            base = base ? base + 1 : shell;
-            snprintf(login_shell, sizeof(login_shell), "-%.*s", (int)(sizeof(login_shell) - 2), base);
-            args[arg_idx++] = login_shell;
-            if (session->command[0]) {
-                args[arg_idx++] = "-c";
-                args[arg_idx++] = session->command;
-            }
-        } else {
+        if (session->login_flag || session->command[0] == '\0') {
             args[arg_idx++] = shell;
-            if (session->command[0]) {
-                args[arg_idx++] = "-c";
-                args[arg_idx++] = session->command;
+        } else {
+            char *cmd_buf = session->command;
+            while (*cmd_buf) {
+                args[arg_idx++] = cmd_buf;
+                cmd_buf += strlen(cmd_buf) + 1;
             }
         }
-
         args[arg_idx] = NULL;
-        execv(shell, args);
+        
+        execv(args[0], args);
         perror("execv");
         exit(1);
     }
