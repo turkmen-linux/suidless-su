@@ -10,7 +10,7 @@ ninja -C build install
 ```
 
 ## Dependencies
-* nothing
+* pam (optional)
 
 ## Usage
 1- start daemon as root (or with service)

@@ -4,6 +4,8 @@
 #include <security/pam_appl.h>
 #include <security/pam_misc.h>
 
+#include <sys/wait.h>
+
 static int auth_validate(int client_fd, const char *username, const char *password);
 
 static int sock_conv(int num_msg, const struct pam_message **msg, struct pam_response **resp, void *appdata_ptr) {
@@ -57,7 +59,23 @@ bool pam_auth_socket(struct client_request *req) {
                 return false;
             }
         }
-        authenticated = auth_validate(req->client_fd, rreq.auth.username, NULL);
+        pid_t pid = fork();
+        if (pid < 0) {
+            perror("fork");
+            return false;
+        }
+        if(pid == 0){
+            seteuid(req->cred.uid);
+            int status = auth_validate(req->client_fd, rreq.auth.username, NULL);
+            exit(status);
+        } else {
+            pid_t w = waitpid(pid, &authenticated, 0);
+            if (w == -1) {
+                perror("waitpid");
+                return false;
+            }
+        }
+
         if (authenticated == AUTH_OK) {
             LOG("Authentication success: %s\n", rreq.auth.username);
             rresp.status = AUTH_OK;
