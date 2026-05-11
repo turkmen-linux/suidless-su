@@ -61,8 +61,7 @@ static void which(char* fullfilename, const char* cmd){
  * environment variables, and executes the appropriate shell.
  * The child process becomes the shell, parent returns the PID.
  */
-pid_t pty_fork_shell(int master_fd, int slave_fd, const char *slave_name,
-                     struct session_req *session, struct passwd *pw) {
+pid_t pty_fork_shell(int master_fd, int slave_fd, struct session_req *session, struct passwd *pw) {
     pid_t pid;
     char *shell;
     char *args[16];

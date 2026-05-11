@@ -2,6 +2,7 @@
 #define AUTH_H
 
 #include "common.h"
+#include <stdbool.h>
 
 #include <sys/types.h>
 

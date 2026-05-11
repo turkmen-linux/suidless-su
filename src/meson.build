@@ -25,6 +25,7 @@ executable('suidless-su',
         '-D_XOPEN_SOURCE=700',
         '-D_GNU_SOURCE',
         '-Wall',
+        '-Wextra',
         '-Werror'
     ],
     link_args: ['-lcrypt'],

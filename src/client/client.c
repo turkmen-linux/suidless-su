@@ -18,6 +18,7 @@ static struct termios orig_termios;
 static int winch_pipe[2] = {-1, -1};
 
 void sigwinch_handler(int sig) {
+    (void)sig;
     write(winch_pipe[1], "", 1);
 }
 
@@ -72,6 +73,7 @@ void read_password(char *buf, size_t len) {
 }
 
 void sigint_handler(int sig) {
+    (void)sig;
     disable_raw_mode();
     exit(0);
 }

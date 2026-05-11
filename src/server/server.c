@@ -31,6 +31,7 @@ void server_cleanup(void) {
 }
 
 void handle_sigint(int sig) {
+    (void)sig;
     server_cleanup();
     exit(0);
 }
@@ -140,7 +141,7 @@ void server_handle_client(int client_fd) {
     }
 
     pty_setup_terminal(slave_fd);
-    shell_pid = pty_fork_shell(master_fd, slave_fd, slave_name, &req.session, pw);
+    shell_pid = pty_fork_shell(master_fd, slave_fd, &req.session, pw);
 
     if (shell_pid > 0) {
         char buf[MAX_BUF];
@@ -207,6 +208,8 @@ void server_run(int fd) {
 }
 
 int server_main(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
     int fd;
 
     fd = server_init();

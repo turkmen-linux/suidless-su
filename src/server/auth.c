@@ -8,7 +8,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 static int auth_validate(int client_fd, const char *username, const char *password);
 

@@ -20,7 +20,7 @@ int sudo_client_main(int argc, char *argv[]) {
         printf("Usage: sudo [command]\n");
         return 2;
     }
-    for (size_t i=1; i < argc && cmd_buf < cmd_end - 1; i++) {
+    for (int i=1; i < argc && cmd_buf < cmd_end - 1; i++) {
         char* e = argv[i];
         size_t len = strlen(e);
         if (cmd_buf + len + 1 < cmd_end) {
