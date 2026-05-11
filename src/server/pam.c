@@ -35,7 +35,10 @@ static int sock_conv(int num_msg, const struct pam_message **msg, struct pam_res
 
         case PAM_ERROR_MSG:
         case PAM_TEXT_INFO:
-            printf("%s\n", msg_ptr->msg);
+            rresp.status = AUTH_MSG;
+            strcpy(rresp.prompt, msg_ptr->msg);
+            LOG("PAM message: %s\n", rresp.prompt);
+            write(client_fd, &rresp, sizeof(rresp));
             break;
 
         default:
@@ -47,6 +50,7 @@ static int sock_conv(int num_msg, const struct pam_message **msg, struct pam_res
 
 bool pam_auth_socket(struct client_request *req) {
     struct client_request rreq;
+    memset(&rreq, 0, sizeof(rreq));
     struct auth_resp rresp;
     ssize_t n;
     size_t auth_try = 0;

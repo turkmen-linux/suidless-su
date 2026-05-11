@@ -33,6 +33,7 @@ static void which(char* fullfilename, const char* cmd){
     exists = stat(cmd, &buffer);
     if ( exists == 0 ) {
         sprintf(fullfilename, "%s",  cmd);
+        free(fullPath);
         return;
     }
 
@@ -43,7 +44,7 @@ static void which(char* fullfilename, const char* cmd){
         sprintf(fullfilename, "%s/%s", token, fileOrDirectory);
         exists = stat(fullfilename, &buffer);
         if ( exists == 0 ) {
-            free(fullPath); // Free the duplicated string
+            free(fullPath);
             return;
         }
 

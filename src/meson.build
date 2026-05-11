@@ -37,5 +37,8 @@ foreach tool : ['sudo', 'su']
         install_dir: get_option('prefix') / get_option('bindir'),
         pointing_to: 'suidless-su'
     )
-    run_command(['ln', '-s', './src/suidless-su', meson.current_build_dir() + '/../'+tool])
+    run_command(
+        ['ln', '-s', './src/suidless-su', meson.current_build_dir() + '/../'+tool],
+        check: false
+    )
 endforeach

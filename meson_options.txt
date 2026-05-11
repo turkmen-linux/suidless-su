@@ -1,2 +1,4 @@
 option('pam', type : 'boolean', value : true)
+option('pam-config-dir', type : 'string', value : '/etc/pam.d')
+
 option('service', type : 'string', value : 'openrc')

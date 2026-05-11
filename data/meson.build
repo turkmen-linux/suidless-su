@@ -13,3 +13,12 @@ if get_option('service') == 'openrc'
     install_mode: 'rwxr-xr-x'
   )
 endif
+
+if get_option('pam')
+    install_data(
+        'suidless-su.pam',
+        install_dir: get_option('pam-config-dir'),
+        install_mode: 'rw-r--r--',
+        rename: 'suidless-su'
+    )
+endif

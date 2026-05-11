@@ -21,6 +21,7 @@
 #define AUTH_OK 0
 #define AUTH_FAIL 1
 #define AUTH_PROMPT 2
+#define AUTH_MSG 3
 
 #define MSG_DATA  0x01
 #define MSG_WINCH 0x02

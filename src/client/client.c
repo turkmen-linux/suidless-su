@@ -143,7 +143,11 @@ int client_run(struct client_request req){
             return 1;
         }
         
-        if(resp.status == AUTH_PROMPT) {
+        if(resp.status == AUTH_MSG) {
+            printf(resp.prompt);
+            fflush(stdout);
+            continue;
+        } else if(resp.status == AUTH_PROMPT) {
             printf(resp.prompt);
             fflush(stdout);
             read_password(req.auth.password, sizeof(req.auth.password));
