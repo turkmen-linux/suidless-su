@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -e
+
+NAME=su
+DIR=/root
+PIDFILE=/run/$NAME.pid
+LOG=/var/log/$NAME.log
+PATH=@prefix/@bindir@:@/bin:/usr/bin:/sbin:/usr/sbin
+DAEMON=@prefix@/@bindir@/suidless-su
+DAEMON_ARGS="--daemon"
+
+case "$1" in
+  start)
+        echo -n "Starting daemon: "$NAME
+        start-stop-daemon --start --quiet --chdir $DIR --make-pidfile --pidfile $PIDFILE \
+        --background --startas $DAEMON -- $DAEMON_ARGS
+        echo "."
+        ;;
+  stop)
+        echo -n "Stopping daemon: "$NAME
+        start-stop-daemon --stop --quiet --signal KILL --oknodo --remove-pidfile --pidfile $PIDFILE
+        echo "."
+        ;;
+  restart)
+        ;;
+
+  *)
+        echo "Usage: "$1" {start|stop|restart}"
+        exit 1
+esac
+
+exit 0

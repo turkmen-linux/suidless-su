@@ -14,6 +14,18 @@ if get_option('service') == 'openrc'
   )
 endif
 
+if get_option('service') == 'sysvinit'
+  configure_file(
+    input : 'su.sysvinit.in',
+    output : 'su',
+    configuration : cdata,
+    install: true,
+    install_dir: '/etc/init.d',
+    install_mode: 'rwxr-xr-x'
+  )
+endif
+
+
 if get_option('pam')
     install_data(
         'suidless-su.pam',
