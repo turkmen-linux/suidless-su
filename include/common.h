@@ -44,6 +44,12 @@ struct auth_resp {
     printf("[%s] " format, timestamp, ##__VA_ARGS__); \
 } while(0)
 
+#ifndef DEBUG
+#define debug
+#else
+#define debug LOG
+#endif
+
 struct session_req {
     int login_flag;
     char command[MAX_CMD];

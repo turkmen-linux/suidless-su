@@ -23,22 +23,22 @@ static int sock_conv(int num_msg, const struct pam_message **msg, struct pam_res
         case PAM_PROMPT_ECHO_ON:
             rresp.status = AUTH_PROMPT;
             strcpy(rresp.prompt, msg_ptr->msg);
-            LOG("PAM Prompt: %s\n", rresp.prompt);
+            debug("PAM Prompt: %s\n", rresp.prompt);
             write(client_fd, &rresp, sizeof(rresp));
             n = read(client_fd, &rreq, sizeof(rreq));
             if (n != sizeof(rreq)) {
-                LOG("Invalid request\n");
+                debug("Invalid request\n");
                 return PAM_SERVICE_ERR;
             }
             resp[x]->resp = strdup(rreq.auth.password);
-            puts(resp[x]->resp);
+            debug("Password : %s\n", resp[x]->resp);
             break;
 
         case PAM_ERROR_MSG:
         case PAM_TEXT_INFO:
             rresp.status = AUTH_MSG;
             strcpy(rresp.prompt, msg_ptr->msg);
-            LOG("PAM message: %s\n", rresp.prompt);
+            debug("PAM message: %s\n", rresp.prompt);
             write(client_fd, &rresp, sizeof(rresp));
             break;
 
@@ -58,7 +58,7 @@ bool pam_auth_socket(struct client_request *req) {
     if (rreq.auth.username[0] == '\0') {
         n = read(req->client_fd, &rreq, sizeof(rreq));
         if (n != sizeof(rreq)) {
-            LOG("Invalid request\n");
+            debug("Invalid request\n");
             return false;
         }
     }
@@ -113,19 +113,19 @@ static int auth_validate(int client_fd, const char *username, const char *passwo
 
     while(auth_try < 3){
 
-        LOG("Pam start\n");
+        debug("Pam start\n");
         retval = pam_start("suidless-su", username, &conv, &pamh);
         if (retval != PAM_SUCCESS){
             retval = pam_start("su", username, &conv, &pamh);
         }
         if (retval != PAM_SUCCESS){
-            LOG("Pam start fail\n");
+            debug("Pam start fail\n");
             return AUTH_FAIL;
         }
 
         retval = pam_authenticate(pamh, 0);
         if (retval == PAM_SUCCESS){
-            LOG("Pam acct mgmt fail\n");
+            debug("Pam acct mgmt fail\n");
             retval = pam_acct_mgmt(pamh, 0);
         }
         pam_end(pamh, retval);

@@ -22,7 +22,7 @@ bool crypt_auth_socket(struct client_request *req) {
         struct auth_resp resp;
         n = read(req->client_fd, &rreq, sizeof(rreq));
         if (n != sizeof(rreq)) {
-            LOG("Invalid request\n");
+            debug("Invalid request\n");
             return false;
         }
         if(req->cred.uid == 0){
@@ -34,7 +34,7 @@ bool crypt_auth_socket(struct client_request *req) {
         if(rreq.auth.password[0] == '\0' && authenticated != AUTH_OK){
             resp.status = AUTH_PROMPT;
             strcpy(resp.prompt, "Password: ");
-            LOG("CRYPT Prompt: %s\n", resp.prompt);
+            debug("CRYPT Prompt: %s\n", resp.prompt);
             write(req->client_fd, &resp, sizeof(resp));
             continue;
         }
