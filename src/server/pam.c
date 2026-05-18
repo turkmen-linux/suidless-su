@@ -78,8 +78,10 @@ bool pam_auth_socket(struct client_request *req) {
                 perror("waitpid");
                 return false;
             }
+            if(authenticated > 1){
+                authenticated = 1;
+            }
         }
-
         if (authenticated == AUTH_OK) {
             LOG("Authentication success: %s\n", rreq.auth.username);
             rresp.status = AUTH_OK;
@@ -95,6 +97,9 @@ bool pam_auth_socket(struct client_request *req) {
             if(auth_try > 3){
                 return false;
             }
+        } else {
+            LOG("Unknown error: %s %d\n", rreq.auth.username, authenticated);
+            return false;
         }
     }
     return true;
@@ -109,13 +114,19 @@ static int auth_validate(int client_fd, const char *username, const char *passwo
     conv.conv = sock_conv;
     conv.appdata_ptr = &client_fd;
 
+    LOG("Pam start\n");
     retval = pam_start("suidless-su", username, &conv, &pamh);
     if (retval != PAM_SUCCESS){
+        retval = pam_start("su", username, &conv, &pamh);
+    }
+    if (retval != PAM_SUCCESS){
+        LOG("Pam start fail\n");
         return AUTH_FAIL;
     }
 
     retval = pam_authenticate(pamh, 0);
     if (retval == PAM_SUCCESS){
+        LOG("Pam acct mgmt fail\n");
         retval = pam_acct_mgmt(pamh, 0);
     }
     pam_end(pamh, retval);
