@@ -16,7 +16,7 @@ bool crypt_auth_socket(struct client_request *req) {
     size_t auth_delay = 0;
     struct client_request rreq;
     
-    size_t auth_try = 1;
+    size_t auth_try = 0;
     int authenticated = AUTH_FAIL;
     while(1){
         struct auth_resp resp;

@@ -163,6 +163,12 @@ int client_run(struct client_request req){
             break;
         } else if (resp.status == AUTH_FAIL){
             fprintf(stderr, "Authentication failed\n");
+            memset(req.auth.password, 0, sizeof(req.auth.password));
+            if (write(fd, &req, sizeof(req)) != sizeof(req)) {
+                perror("write request");
+                close(fd);
+                return 1;
+            }
             continue;
         }
     }
